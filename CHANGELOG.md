@@ -1,8 +1,6 @@
-# Change Log
+# 更新日志
 
-All notable changes to the "for-you" extension will be documented in this file.
-
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
+[更新日志说明文档](https://keepachangelog.com/zh-CN/1.0.0/)
 
 ## [Unreleased]
 
