@@ -3,6 +3,7 @@
 'use strict';
 
 const path = require('path');
+const webViewWebpackConfig = require('./webviews/webpack.config.js')
 
 //@ts-check
 /** @typedef {import('webpack').Configuration} WebpackConfig **/
@@ -42,4 +43,4 @@ const extensionConfig = {
   },
 };
 
-module.exports = [ extensionConfig ];
+module.exports = [ extensionConfig, webViewWebpackConfig ];

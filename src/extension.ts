@@ -1,16 +1,10 @@
 import * as vscode from 'vscode';
+import { CSVEditorProvider } from './providers/csvEditorProvider';
 
 
 export function activate(context: vscode.ExtensionContext) {
-	
-
-	console.log('Congratulations, your extension "for-you" is now active!');
-
-	let disposable = vscode.commands.registerCommand('for-you.helloWorld', () => {
-		vscode.window.showInformationMessage('Hello World from for you!');
-	});
-
-	context.subscriptions.push(disposable);
+	vscode.window.showInformationMessage("你好，加油~")
+	context.subscriptions.push(CSVEditorProvider.register(context));
 }
 
 export function deactivate() {}
