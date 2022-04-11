@@ -22,7 +22,8 @@
 					{
 						"filenamePattern": "*.csv"
 					}
-				]
+				],
+				"priority": "option"
 			}
 		]
 	},

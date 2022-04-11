@@ -104,6 +104,7 @@ body {
                 width: 100%;
                 min-width: 1000px;
                 white-space: pre-wrap;
+                position: relative;
 
                 thead th {
                     cursor: default;
@@ -139,8 +140,6 @@ body {
                 }
 
                 tbody {
-                    position: relative;
-
                     textarea {
                         border: solid 1px var(--vscode-focusBorder);
                         position: absolute;
