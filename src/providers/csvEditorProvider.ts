@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { renderHtml } from '../utils/webviewHelper';
+import {parse, transform, stringify} from 'csv/sync';
 
 export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
 	private static readonly viewType = 'for-you.csv-editor';
@@ -49,7 +50,7 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
 	private onDidReceiveMessageDo(webview: vscode.Webview, request: any, document: vscode.TextDocument) {
 		if (request.uri === '/update/document') {
 			let params = request.params
-			this.updateTextDocument(document, params.row, params.col, params.text)
+			this.updateTextDocumentByCell(document, params.row, params.col, params.text)
 		} else if (request.uri === '/get/document') {
 			let startLine = request.params.page <= 1 ? 0 : (request.params.page - 1) * request.params.prePage
 			let endLine = request.params.page <= 1 ? request.params.prePage : request.params.prePage * request.params.page
@@ -69,10 +70,8 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
 			} else {
 				let range = new vscode.Range(startLine, 0, endLine, 9999);
 				let text = document.getText(range)
-				let data: any = []
-				text.split(/\n|\r\n/).forEach(str => {
-					data.push(str.split(','))
-				})
+				const data: string[][] = this.csvTxt2Arrar(text)
+
 				webview.postMessage({
 					requestId: request.requestId,
 					startLine: startLine,
@@ -87,7 +86,7 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
 		}
 	}
 
-	private updateTextDocument(
+	private updateTextDocumentByCell(
 		document: vscode.TextDocument,
 		row: number,
 		col: number,
@@ -96,20 +95,31 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
 		try {
 			const edit = new vscode.WorkspaceEdit()
 			const lineStr: vscode.TextLine = document.lineAt(row)
-			let offset = col === 0 ? 0 : 1;
-			let startCharacter = lineStr.text.split(',').slice(0, col).join(',').length + offset
-			let endCharacter = startCharacter + lineStr.text.split(',')[col].length
-			let range = new vscode.Range(row, startCharacter, row, endCharacter)
+			let lineInfo: string[][] = this.csvTxt2Arrar(lineStr.text)
+			lineInfo[0][col] = text
+			let newLine = stringify(lineInfo)
 
 			edit.replace(
 				document.uri,
-				range,
-				text
+				lineStr.range,
+				newLine.trimEnd()
 			);
 
 			vscode.workspace.applyEdit(edit);
 		} catch (error) {
 			
 		}
+	}
+
+	private csvTxt2Arrar(txt: string): string[][] {
+		if (!txt) {
+			return [[]]
+		}
+		const rawRecords = parse(txt);
+		let data: any = transform(rawRecords, function(data){
+			return data
+		});
+
+		return data
 	}
 }
