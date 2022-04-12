@@ -71,7 +71,8 @@ let vscodeState = {
 export default {
     data() {
         return {
-            tableHeader: [],
+            inited: false,
+            tableHeader: excelHeaderMap,
             tableData: [],
             searchText: '',
             lastTriggerSearchTxt: '',
@@ -103,25 +104,7 @@ export default {
             search.setAttribute('style', 'visibility: visible')
         }
 
-        this.$postMessage('/get/document', {
-            page: this.page,
-            prePage: this.prePage,
-            search: this.lastTriggerSearchTxt
-        }, (e) => {
-            let headerSize = e.data.data[0] ? e.data.data[0].length + 1 : 1;
-            this.tableHeader = excelHeaderMap.slice(0, headerSize)
-            this.tableData = e.data.data;
-            this.lineCount = e.data.lineCount;
-            this.$nextTick(function() {
-                previewTextarea = this.$el.querySelector('.xf-excel-preview-textarea');
-                textarea = this.$el.querySelector('.cell-editor');
-                csvTable = this.$el.querySelector('table');
-                console.log(csvTable.rows)
-                activeCell = csvTable.rows[this.activeCellPosition.y].cells[this.activeCellPosition.x];
-                this.resetTextarea(activeCell);
-                this.initEvent();
-            })
-        });
+        this.gotoPage()
     },
     computed: {
         pageTotal() {
@@ -137,6 +120,8 @@ export default {
             this.$vscode.setState(vscodeState);
         },
         initEvent() {
+            if (this.inited) return;
+
             document.addEventListener('keydown',(e)=>{
                 if(e.ctrlKey && e.key=== 'f'){
                     let search = this.$el.querySelector('.cf-search')
@@ -254,21 +239,43 @@ export default {
             }
 
             this.$postMessage('/get/document', params, (e) => {
-                let headerSize = e.data.data[0] ? e.data.data[0].length + 1 : 1;
-                this.tableHeader = excelHeaderMap.slice(0, headerSize)
+                this.tableData = this.initTableData(e.data.data);
                 this.rowStarIndex = e.data.startLine
-                this.tableData = e.data.data;
                 this.lineCount = e.data.lineCount;
 
-                vscodeState.page = this.page;
-                vscodeState.rowStarIndex = this.rowStarIndex;
-                this.$vscode.setState(vscodeState);
-
                 this.$nextTick(function() {
-                    activeCell = csvTable.querySelector('td:nth-child(2)');
+                    if (!this.inited) {
+                        this.inited = true
+                        previewTextarea = this.$el.querySelector('.xf-excel-preview-textarea');
+                        textarea = this.$el.querySelector('.cell-editor');
+                        csvTable = this.$el.querySelector('table');
+                        activeCell = csvTable.rows[this.activeCellPosition.y].cells[this.activeCellPosition.x];
+                        this.initEvent();
+                    } else {
+                        vscodeState.page = this.page;
+                        vscodeState.rowStarIndex = this.rowStarIndex;
+                        this.$vscode.setState(vscodeState);
+                        activeCell = csvTable.querySelector('td:nth-child(2)');
+                    }
+
                     this.resetTextarea(activeCell);
                 })
             })
+        },
+        initTableData(data) {
+            let colSize = this.tableHeader.length - 1
+            let result = new Array(this.prePage)
+            let tempi = []
+            let concatArry = new Array(colSize)
+            for (let index = 0; index < result.length; index ++) {
+                tempi = data[index] || []
+                if (tempi.length >= colSize) {
+                    result[index] = tempi
+                } else {
+                    result[index] = tempi.concat(concatArry.slice(0, colSize - tempi.length).join(',').split(','))
+                }
+            }
+            return result
         }
     }
 }

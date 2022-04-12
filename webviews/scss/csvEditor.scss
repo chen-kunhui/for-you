@@ -117,6 +117,7 @@ body {
                     cursor: cell;
                 }
                 td, th {
+                    min-width: 100px;
                     white-space: nowrap;
                     overflow: hidden;
                     text-align: center;
