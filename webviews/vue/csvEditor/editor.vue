@@ -245,12 +245,12 @@ export default {
 
                 this.$nextTick(function() {
                     if (!this.inited) {
-                        this.inited = true
                         previewTextarea = this.$el.querySelector('.xf-excel-preview-textarea');
                         textarea = this.$el.querySelector('.cell-editor');
                         csvTable = this.$el.querySelector('table');
                         activeCell = csvTable.rows[this.activeCellPosition.y].cells[this.activeCellPosition.x];
                         this.initEvent();
+                        this.inited = true
                     } else {
                         vscodeState.page = this.page;
                         vscodeState.rowStarIndex = this.rowStarIndex;

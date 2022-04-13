@@ -14,10 +14,35 @@
   	],
   	"main": "./dist/extension.js",
   	"contributes": {
+		"languages": [
+			{
+				"id": "csv",
+				"extensions": [
+					".csv",
+					".CSV"
+				],
+				"aliases": ["csv", "CSV"]
+			}
+		],
+		"menus": {
+			"editor/context": [
+				{
+					"when": "editorLangId == csv",
+					"command": "for-you.open-with-csv-editor",
+					"group": "for-you"
+				}
+			],
+			"explorer/context": [
+				{
+					"command": "for-you.open-with-csv-editor",
+					"group": "for-you"
+				}
+			]
+		},
   	  	"customEditors": [
   	  	  	{
   	  	  	  	"viewType": "for-you.csv-editor",
-  	  	  	  	"displayName": "CSV editor",
+  	  	  	  	"displayName": "ForYou CSV 编辑器",
   	  	  	  	"selector": [
   	  	  	  	  	{
   	  	  	  	  	  	"filenamePattern": "*.csv"
@@ -25,7 +50,13 @@
   	  	  	  	],
   	  	  	  	"priority": "option"
   	  	  	}
-  	  	]
+  	  	],
+		"commands": [
+			{
+				"command": "for-you.open-with-csv-editor",
+				"title": "使用ForYou插件打开"
+			}
+		]
   	},
   	"scripts": {
   	  	"vscode:prepublish": "npm run package",

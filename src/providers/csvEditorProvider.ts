@@ -20,6 +20,7 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
 		webviewPanel: vscode.WebviewPanel,
 		_token: vscode.CancellationToken
 	): Promise<void> {
+		this.enCodeCheck(document)
 		webviewPanel.webview.options = {
 			enableScripts: true
 		};
@@ -83,6 +84,8 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
 				})
 			}
 			
+		} else if (request.uri === '/get/test') {
+			vscode.commands.executeCommand('vscode.openWith', document.uri, 'for-you.csv-editor')
 		}
 	}
 
@@ -107,7 +110,7 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
 
 			vscode.workspace.applyEdit(edit);
 		} catch (error) {
-			
+			console.log(error)
 		}
 	}
 
@@ -121,5 +124,15 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
 		});
 
 		return data
+	}
+
+	private async enCodeCheck(document: vscode.TextDocument) {
+		let start = new Date()
+		console.log("=====21======")
+		let text = document.getText()
+		if (text.indexOf('�') != -1) {
+			console.log("=====2======", new Date().getTime() - start.getTime())
+		}
+		console.log("========1===", new Date().getTime() - start.getTime())
 	}
 }
