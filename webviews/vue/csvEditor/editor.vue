@@ -22,7 +22,7 @@
                     <tbody>
                         <textarea class="cell-editor" style="visibility: hidden;" @input="onTextareaInput"></textarea>
                         <tr v-for="(tr, index) in tableData" :key="index">
-                            <td class="row-num">{{index + rowStarIndex + 1}}</td>
+                            <td class="row-num">{{parseInt(this.lineInfo[index]) + 1}}</td>
                             <td v-for="(td, index) in tr" :key="index">{{td}}</td>
                         </tr>
                     </tbody>
@@ -61,7 +61,6 @@ let vscodeState = {
     searchText: '',
     lastTriggerSearchTxt: '',
     searchVisiable: false,
-    rowStarIndex: 0,
     activeCellPosition: {
         x: 1,
         y: 1
@@ -74,10 +73,10 @@ export default {
             inited: false,
             tableHeader: excelHeaderMap,
             tableData: [],
+            lineInfo: [],
             searchText: '',
             lastTriggerSearchTxt: '',
             lineCount: 0,
-            rowStarIndex: 0,
             page: 1,
             prePage: 100,
             activeCellPosition: {
@@ -94,7 +93,6 @@ export default {
         }
         this.page = vscodeState.page
         this.prePage = vscodeState.prePage
-        this.rowStarIndex = vscodeState.rowStarIndex
         this.activeCellPosition.x = vscodeState.activeCellPosition.x
         this.activeCellPosition.y = vscodeState.activeCellPosition.y
         this.searchText = vscodeState.searchText
@@ -111,7 +109,7 @@ export default {
             return Math.ceil(this.lineCount / this.prePage)
         },
         activeCellName() {
-            return `${excelHeaderMap[this.activeCellPosition.x]}${this.activeCellPosition.y + this.rowStarIndex}`
+            return `${excelHeaderMap[this.activeCellPosition.x]}${this.lineInfo[this.activeCellPosition.y - 1] + 1}`
         }
     },
     methods: {
@@ -149,6 +147,7 @@ export default {
             this.lastTriggerSearchTxt = this.searchText
             vscodeState.lastTriggerSearchTxt = this.lastTriggerSearchTxt
             this.$vscode.setState(vscodeState);
+            this.gotoPage(null, 1);
         },
         onSearch() {
             this.lastTriggerSearchTxt = this.searchText
@@ -208,10 +207,11 @@ export default {
             let col = cell.cellIndex - 1
             
             this.tableData[row][col] = text
+            let line = this.lineInfo[row];
 
             this.$postMessage('/update/document', {
                 text: text,
-                row: row + this.rowStarIndex,
+                row: line,
                 col: col
             }, (e) => {
                 console.log("----postMessage----", e)
@@ -239,9 +239,9 @@ export default {
             }
 
             this.$postMessage('/get/document', params, (e) => {
-                this.tableData = this.initTableData(e.data.data);
-                this.rowStarIndex = e.data.startLine
                 this.lineCount = e.data.lineCount;
+                this.lineInfo = e.data.lineInfo;
+                this.tableData = this.initTableData(e.data.data);
 
                 this.$nextTick(function() {
                     if (!this.inited) {
@@ -253,7 +253,6 @@ export default {
                         this.inited = true
                     } else {
                         vscodeState.page = this.page;
-                        vscodeState.rowStarIndex = this.rowStarIndex;
                         this.$vscode.setState(vscodeState);
                         activeCell = csvTable.querySelector('td:nth-child(2)');
                     }
@@ -265,10 +264,17 @@ export default {
         initTableData(data) {
             let colSize = this.tableHeader.length - 1
             let result = new Array(this.prePage)
+            if (this.lastTriggerSearchTxt) {
+                result = new Array(this.lineInfo.length)
+            }
+            console.log("=========111=========", this.lineInfo.length, result.length)
             let tempi = []
-            let concatArry = new Array(colSize)
+            let concatArry = new Array(colSize);
             for (let index = 0; index < result.length; index ++) {
                 tempi = data[index] || []
+                if (!this.lineInfo[index]) {
+                    this.lineInfo[index] = index === 0 ? 0 : this.lineInfo[index - 1] + 1;
+                }
                 if (tempi.length >= colSize) {
                     result[index] = tempi
                 } else {
