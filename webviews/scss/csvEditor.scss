@@ -1,9 +1,33 @@
 body {
-    padding: 10px;
+    padding: 0px;
 }
 
 .xf-excel {
-    .cf-search {
+    $xfBorderColor: var(--vscode-editorLineNumber-foreground);
+
+    .xf-contextmenu { // 右键菜单
+        position: fixed;
+        z-index: 99;
+        visibility: hidden;
+        background: var(--vscode-list-dropBackground);
+        color: var(--vscode-list-activeSelectionForeground);
+        ul {
+            padding: 0px;
+            margin: 0px;
+            min-width: 100px;
+        }
+        li {
+            list-style: none;
+            height: 20px;
+            padding: 5px;
+
+            &:hover {
+                background: var(--vscode-list-focusHighlightForeground);
+                cursor: pointer;
+            }
+        }
+    }
+    .cf-search { // ctrl f 搜索框
         visibility: hidden;
         padding: 5px;
         width: 500px;
@@ -43,47 +67,70 @@ body {
             }
         }
     }
-    
-    .xf-excel-content {
-        border: 1px solid var(--vscode-editorLineNumber-foreground);
+    .xf-excel-header {
+        display: flex;
+        height: 30px;
+        padding: 0px;
+        align-items: center;
+        border-top: 1px solid $xfBorderColor;
 
-        .xf-excel-preview-input {
-            margin-bottom: -3px;
-            padding: 5px;
-            position: relative;
+        .xf-excel-header-tool-btn {
+            padding: 0 5px;
+            height: 100%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+
+            &:hover {
+                background: var(--vscode-tab-inactiveForeground);
+            }
+            &:active {
+                background: var(--vscode-tab-inactiveBackground);
+            }
+
+            .codicon {
+                margin-right: 3px;
+            }
+        }
+    }
+    .xf-excel-content {
+        .xf-excel-preview-input { // 头部单元格编辑框
+            margin-bottom: 0px;
+            padding: 0px;
             $fontSize: var(--vscode-editor-font-size);
             $lineHeight: calc(var(--vscode-editor-font-size) + 10px);
             background: var(--vscode-tab-inactiveBackground);
-            z-index: 99;
-            border-bottom: 1px solid var(--vscode-editorLineNumber-foreground);
+            border-top: 1px solid $xfBorderColor;
+            border-bottom: 1px solid $xfBorderColor;
 
             & > div {
                 display: flex;
                 align-items: center;
+                justify-content: center;
                 position: absolute;
                 padding: 0 5px;
                 font-size: $fontSize;
-                line-height: $lineHeight;
-                background: var(--vscode-focusBorder);
+                line-height: 140px;
+                background: var(--vscode-tab-inactiveBackground);
                 width: 100px;
             }
 
             & > textarea {
-                padding: 0px 5px 0px 120px;
-                height: $lineHeight;
-                line-height: $lineHeight;
+                padding: 5px 5px 5px 120px;
+                height: 130px;
+                line-height: 12px;
                 resize: none;
-                width: calc(100% - 120px - 10px);
+                width: calc(100% - 120px - 5px);
                 border: none;
-                outline: solid 1px var(--vscode-focusBorder);
-                background: var(--vscode-input-background);
+                outline: none;
+                background: var(--vscode-editor-background);
                 font-family: var(--vscode-editor-font-family);
                 font-weight: var(--vscode-editor-font-weight);
-                font-size: $fontSize;
+                font-size: 12px;
                 color: var(--vscode-foreground);
 
                 &:focus {
-                    outline: solid 1px var(--vscode-focusBorder);
+                    outline: none;
                 }
             }
         }
@@ -91,8 +138,8 @@ body {
         .xf-excel-body {
             max-width: 100%;
             min-width: 100%;
-            max-height: calc(100vh - 100px);
-            min-height: calc(100vh - 100px);
+            max-height: calc(100vh - 217px);
+            min-height: calc(100vh - 217px);
             overflow: auto;
 
             table {
@@ -103,7 +150,6 @@ body {
                 border-collapse: collapse;
                 width: 100%;
                 min-width: 1000px;
-                white-space: pre-wrap;
                 position: relative;
 
                 thead th {
@@ -117,11 +163,15 @@ body {
                     cursor: cell;
                 }
                 td, th {
-                    min-width: 100px;
-                    white-space: nowrap;
-                    overflow: hidden;
+                    div {
+                        min-width: 100px;
+                        max-width: 100px;
+                        max-height: 20px;
+                        overflow: hidden;
+                    }
+                    white-space: pre;
                     text-align: center;
-                    border: 1px solid var(--vscode-editorLineNumber-foreground);
+                    border: 1px solid $xfBorderColor;
                     padding: 5px;
                     &:first-child {
                         cursor: default;

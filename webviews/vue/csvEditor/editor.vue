@@ -7,6 +7,20 @@
                 <span class="codicon codicon-chrome-close" @click="closeSearchBox"></span>
             </div>
         </div>
+        <div class="xf-excel-header">
+            <div class="xf-excel-header-tool-btn" @click="saveDocument">
+                <i class="codicon codicon-save"></i><span>保存(ctrl+S)</span>
+            </div>
+            <div class="xf-excel-header-tool-btn" @click="openSearchBox">
+                <i class="codicon codicon-search"></i><span>搜索(ctrl+F)</span>
+            </div>
+            <div class="xf-excel-header-tool-btn" @click="openDoc">
+                <i class="codicon codicon-library"></i><span>使用文档</span>
+            </div>
+            <div class="xf-excel-header-tool-btn" @click="feedback">
+                <i class="codicon codicon-feedback"></i><span>使用反馈</span>
+            </div>
+        </div>
         <div class="xf-excel-content">
             <div class="xf-excel-preview-input">
                 <div><i class="codicon codicon-edit"></i><span>{{activeCellName}}</span></div>
@@ -22,16 +36,18 @@
                     <tbody>
                         <textarea class="cell-editor" style="visibility: hidden;" @input="onTextareaInput"></textarea>
                         <tr v-for="(tr, index) in tableData" :key="index">
-                            <td class="row-num">{{parseInt(this.lineInfo[index]) + 1}}</td>
-                            <td v-for="(td, index) in tr" :key="index">{{td}}</td>
+                            <td class="row-num">
+                                {{tr.rowNo}}
+                            </td>
+                            <td v-for="(td, i) in tr.cells" :key="i"><div class="xf-csv-tr-data">{{td}}</div></td>
                         </tr>
                     </tbody>
                 </table>
             </div>
             <div class="xf-excel-footer">
                 <div class="xf-excel-status-bar">
-                    <div><span>数据总条数</span><span>({{lineCount}})</span></div>
-                    <div><span>总页数</span><span>({{pageTotal}})</span></div>
+                    <div><span :title="'文件总行数 | csv总行数'">【{{lineCount}}|{{rowTotal}}】</span></div>
+                    <div><span>总条数</span><span>({{dataTotal}})</span></div>
                     <div><span>每页显示条数</span><span>({{prePage}})</span></div>
                     <div><span>当前选中单元格</span><span>({{activeCellName}})</span></div>
                     
@@ -45,11 +61,18 @@
                 </div>
             </div>
         </div>
+        <div class="xf-contextmenu">
+            <ul>
+                <li @click="insertRow('after')">在下方插入行</li>
+                <li @click="insertRow('before')">在上方插入行</li>
+            </ul>
+        </div>
     </div>
 </template>
 
 <script>
 import { excelHeaderMap } from "./excelColMap.js";
+
 let textarea = null;
 let previewTextarea = null;
 let activeCell = null;
@@ -72,11 +95,12 @@ export default {
         return {
             inited: false,
             tableHeader: excelHeaderMap,
-            tableData: [],
-            lineInfo: [],
+            tableData: [], // [{rowNo: 0, data: [1,2,3]}, ...]
             searchText: '',
             lastTriggerSearchTxt: '',
             lineCount: 0,
+            rowTotal: 0,
+            dataTotal: 0,
             page: 1,
             prePage: 100,
             activeCellPosition: {
@@ -86,30 +110,33 @@ export default {
         }
     },
     mounted() {
-        if(this.$vscode.getState()) {
-            vscodeState = this.$vscode.getState();
-        } else {
-            this.$vscode.setState(vscodeState);
-        }
-        this.page = vscodeState.page
-        this.prePage = vscodeState.prePage
-        this.activeCellPosition.x = vscodeState.activeCellPosition.x
-        this.activeCellPosition.y = vscodeState.activeCellPosition.y
-        this.searchText = vscodeState.searchText
-        this.lastTriggerSearchTxt = vscodeState.lastTriggerSearchTxt
-        if (vscodeState.searchVisiable) {
-            let search = this.$el.querySelector('.cf-search')
-            search.setAttribute('style', 'visibility: visible')
-        }
+        this.$postMessage('/init', {}, (e) => {
+            if(this.$vscode.getState()) {
+                vscodeState = this.$vscode.getState();
+            } else {
+                this.$vscode.setState(vscodeState);
+            }
+            this.page = vscodeState.page
+            this.prePage = vscodeState.prePage
+            this.activeCellPosition.x = vscodeState.activeCellPosition.x
+            this.activeCellPosition.y = vscodeState.activeCellPosition.y
+            this.searchText = vscodeState.searchText
+            this.lastTriggerSearchTxt = vscodeState.lastTriggerSearchTxt
+            if (vscodeState.searchVisiable) {
+                let search = this.$el.querySelector('.cf-search')
+                search.setAttribute('style', 'visibility: visible')
+            }
 
-        this.gotoPage()
+            this.gotoPage()
+        });
     },
     computed: {
         pageTotal() {
-            return Math.ceil(this.lineCount / this.prePage)
+            return Math.ceil(this.dataTotal / this.prePage)
         },
         activeCellName() {
-            return `${excelHeaderMap[this.activeCellPosition.x]}${this.lineInfo[this.activeCellPosition.y - 1] + 1}`
+            let row = this.tableData[this.activeCellPosition.y - 1]?.rowNo || ''
+            return `${excelHeaderMap[this.activeCellPosition.x]}${row}`
         }
     },
     methods: {
@@ -117,17 +144,56 @@ export default {
             vscodeState.searchText = this.searchText
             this.$vscode.setState(vscodeState);
         },
+        openDoc() {
+            this.$postMessage('/open/doc', {}, () => {});
+        },
+        feedback() {
+            this.$postMessage('/open/feedback', {}, () => {});
+        },
+        saveDocument() {
+            this.$postMessage('/save/document', {}, () => {});
+        },
+        openSearchBox() {
+            let muen = document.querySelector('.xf-contextmenu');
+            muen.setAttribute('style', 'hidden');
+            let search = this.$el.querySelector('.cf-search')
+            let input = search.querySelector('input')
+            search.setAttribute('style', 'visibility: visible')
+            input.focus();
+            vscodeState.searchVisiable = true
+            this.$vscode.setState(vscodeState);
+        },
         initEvent() {
             if (this.inited) return;
 
+            document.addEventListener('contextmenu',(e)=>{
+                e.preventDefault();
+                let muen = document.querySelector('.xf-contextmenu');
+                if (e.target.tagName === 'TD' && !e.target.className.includes("row-num")) {
+                    this.resetTextarea(e.target);
+                    muen.setAttribute('style', `visibility: visible; top: ${e.y}px;left: ${e.x}px;`)
+                } else if (e.target.className.includes('xf-csv-tr-data')) {
+                    this.resetTextarea(e.target.parentNode);
+                    muen.setAttribute('style', `visibility: visible; top: ${e.y}px;left: ${e.x}px;`)
+                } else if (e.target.tagName === 'TEXTAREA' && e.target.className.includes('cell-editor')) {
+                    muen.setAttribute('style', `visibility: visible; top: ${e.y}px;left: ${e.x}px;`)
+                } else {
+                    muen.setAttribute('style', 'hidden');
+                }
+            })
+            document.addEventListener('click', () => {
+                let muen = document.querySelector('.xf-contextmenu');
+                muen.setAttribute('style', 'hidden');
+            })
             document.addEventListener('keydown',(e)=>{
                 if(e.ctrlKey && e.key=== 'f'){
-                    let search = this.$el.querySelector('.cf-search')
-                    let input = search.querySelector('input')
-                    search.setAttribute('style', 'visibility: visible')
-                    input.focus();
-                    vscodeState.searchVisiable = true
-                    this.$vscode.setState(vscodeState);
+                    this.openSearchBox();
+                } else if (e.ctrlKey && e.key=== 's') {
+                    this.saveDocument();
+                } else if (e.ctrlKey && e.key=== 'z') {
+                    this.gotoPage();
+                } else if (e.ctrlKey && e.key=== 'y') {
+                    this.gotoPage();
                 }
             })
 
@@ -158,6 +224,8 @@ export default {
         onTableClick(e) {
             if (e.target.tagName === 'TD') {
                 this.resetTextarea(e.target)
+            } else if (e.target.className.includes('xf-csv-tr-data')) {
+                this.resetTextarea(e.target.parentNode)
             }
         },
         onTextareaInput(e) {
@@ -168,15 +236,22 @@ export default {
             } else {
                 return;
             }
-            if (timer) {
-                clearInterval(timer)
-            }
+
+            if (timer) { clearInterval(timer);}
             timer = setInterval(() => {
                 clearInterval(timer)
                 this.updateDocument(activeCell, textarea.value)
-            }, 300)
+            }, 500)
         },
         resetTextarea(cell, resetValue = true){
+            if (!cell) {
+                textarea.setAttribute('style', `visibility: hidden;`);
+                previewTextarea.setAttribute('disabled', 'disabled');
+                textarea.value = '';
+                previewTextarea.value = '';
+                return;
+            }
+
             if(cell.className.includes("row-num")) {
                 return
             }
@@ -196,25 +271,28 @@ export default {
             let offsetHeight = activeCell.offsetHeight
             let offsetTop = activeCell.offsetTop - 1
             let offsetLeft = activeCell.offsetLeft
-            textarea.setAttribute('style', `visibility: visible; top: ${offsetTop}px;left: ${offsetLeft}px; width: ${offsetWidth - 11}px; height: ${offsetHeight - 11}px; padding: 5px;`)
+            textarea.setAttribute('style', `visibility: visible; top: ${offsetTop}px;left: ${offsetLeft}px; width: ${offsetWidth - 11}px; height: ${offsetHeight - 11}px; padding: 5px;`);
+            previewTextarea.removeAttribute('disabled');
             if (resetValue) {
                 textarea.value = text
                 previewTextarea.value = textarea.value
             }
         },
         updateDocument(cell, text){
-            let row = cell.parentElement.rowIndex - 1
-            let col = cell.cellIndex - 1
-            
-            this.tableData[row][col] = text
-            let line = this.lineInfo[row];
+            let row = cell.parentElement.rowIndex - 1;
+            let col = cell.cellIndex - 1;
+            let line = this.tableData[row].rowNo - 1;
 
             this.$postMessage('/update/document', {
                 text: text,
                 row: line,
                 col: col
             }, (e) => {
-                console.log("----postMessage----", e)
+                if (e.data.success) {
+                    this.tableData[row].cells[col] = text;
+                } else {
+                    console.error("=====修改文档失败=====")
+                }
             });
         },
         gotoLastPage(e) {
@@ -240,15 +318,20 @@ export default {
 
             this.$postMessage('/get/document', params, (e) => {
                 this.lineCount = e.data.lineCount;
-                this.lineInfo = e.data.lineInfo;
-                this.tableData = this.initTableData(e.data.data);
+                this.rowTotal = e.data.rowTotal;
+                this.dataTotal = e.data.dataTotal;
+                this.tableData = this.initTableData(e.data.tableData);
 
                 this.$nextTick(function() {
                     if (!this.inited) {
                         previewTextarea = this.$el.querySelector('.xf-excel-preview-textarea');
                         textarea = this.$el.querySelector('.cell-editor');
                         csvTable = this.$el.querySelector('table');
-                        activeCell = csvTable.rows[this.activeCellPosition.y].cells[this.activeCellPosition.x];
+                        try {
+                            activeCell = csvTable.rows[this.activeCellPosition.y].cells[this.activeCellPosition.x];
+                        } catch (error) {
+                            activeCell = null;
+                        }
                         this.initEvent();
                         this.inited = true
                     } else {
@@ -265,23 +348,58 @@ export default {
             let colSize = this.tableHeader.length - 1
             let result = new Array(this.prePage)
             if (this.lastTriggerSearchTxt) {
-                result = new Array(this.lineInfo.length)
+                result = new Array(data.length);
             }
-            console.log("=========111=========", this.lineInfo.length, result.length)
-            let tempi = []
+
+            let tempi = [];
+            let row = 0;
             let concatArry = new Array(colSize);
+            let valid = false; // 标识该条数据是否是文件中真实存在的数据
             for (let index = 0; index < result.length; index ++) {
-                tempi = data[index] || []
-                if (!this.lineInfo[index]) {
-                    this.lineInfo[index] = index === 0 ? 0 : this.lineInfo[index - 1] + 1;
-                }
-                if (tempi.length >= colSize) {
-                    result[index] = tempi
+                if (data[index]) {
+                    row = data[index].rowNo;
+                    valid = true;
                 } else {
-                    result[index] = tempi.concat(concatArry.slice(0, colSize - tempi.length).join(',').split(','))
+                    row += 1;
+                    valid = false;
+                }
+                tempi = data[index]?.cells || []
+
+                if (tempi.length >= colSize) {
+                    result[index] = { valid: valid, rowNo: row, cells: tempi }
+                } else {
+                    result[index] = { valid: valid, rowNo: row, cells: tempi.concat(concatArry.slice(0, colSize - tempi.length).join(',').split(','))}
                 }
             }
             return result
+        },
+        insertRow(position) {
+            let row = activeCell.parentElement.rowIndex - 1;
+            let col = activeCell.cellIndex;
+            if (!this.tableData[row].valid) {
+                return;
+            }
+            let line = this.tableData[row].rowNo - 1;
+            let params = {
+                rowNo: line,
+                insterPosition: position,
+                page: this.page,
+                prePage: this.prePage,
+                search: this.lastTriggerSearchTxt
+            }
+            this.$postMessage('/insert/row', params, (e) => {
+                if (e.data.success) {
+                    this.lineCount = e.data.lineCount;
+                    this.rowTotal = e.data.rowTotal;
+                    this.dataTotal = e.data.dataTotal;
+                    this.tableData = this.initTableData(e.data.tableData);
+                    this.$nextTick(function() {
+                        let newrow = position === 'before' ? row + 2 : row + 1;
+                        activeCell = csvTable.rows[newrow].cells[col];
+                        this.resetTextarea(activeCell);
+                    });
+                }
+            })
         }
     }
 }
