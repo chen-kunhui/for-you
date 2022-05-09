@@ -95,6 +95,7 @@ export class DocumentEditer {
 			range,
 			newLine.trimEnd()
 		);
+
 		vscode.workspace.applyEdit(edit).then(success => {
 			if (success) {
 				if (oldLineCount !== newLineCount) {

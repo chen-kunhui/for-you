@@ -127,7 +127,11 @@ export default {
                 search.setAttribute('style', 'visibility: visible')
             }
 
-            this.gotoPage()
+            this.gotoPage();
+
+            this.$listenMsg('/update/table', () => {
+                this.gotoPage();
+            })
         });
     },
     computed: {
@@ -190,10 +194,6 @@ export default {
                     this.openSearchBox();
                 } else if (e.ctrlKey && e.key=== 's') {
                     this.saveDocument();
-                } else if (e.ctrlKey && e.key=== 'z') {
-                    this.gotoPage();
-                } else if (e.ctrlKey && e.key=== 'y') {
-                    this.gotoPage();
                 }
             })
 

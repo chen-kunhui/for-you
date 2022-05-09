@@ -40,10 +40,6 @@ export class PageManager {
         return this.filterRows[index];
     }
 
-    resetSearchResult() {
-
-    } 
-
     rowTotal(): number {
         return this.rows.length;
     }

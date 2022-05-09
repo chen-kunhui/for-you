@@ -7,6 +7,7 @@ import { PageManager } from './csv/pageManager';
 export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
 	private documentEditer: DocumentEditer | undefined;
 	private documentGeter: DocumentGeter | undefined;
+	private pageManager: PageManager = new PageManager();
 
 	constructor(
 		private readonly context: vscode.ExtensionContext,
@@ -22,6 +23,7 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
 	): vscode.Disposable {
 		const provider = new CSVEditorProvider(context, docUrl, feedbackUrl);
 		const providerRegistration = vscode.window.registerCustomEditorProvider(viewType, provider);
+
 		return providerRegistration;
 	}
 
@@ -44,19 +46,37 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
 		webviewPanel.webview.onDidReceiveMessage(e => {
 			this.onDidReceiveMessageDo(webviewPanel.webview, e, document)
 		});
+
+		let updateTimer: any = null;
+		let event = vscode.workspace.onDidChangeTextDocument(e => {
+			// ctrl + z, ctrl + y 时更新页面数据
+			if (e.document.uri.fsPath === document.uri.fsPath && e.reason) {
+				if (updateTimer) { clearInterval(updateTimer) }
+				updateTimer = setInterval(() => {
+					this.pageManager.resetRows(document, 0);
+					webviewPanel.webview.postMessage({
+						event: '/update/table'
+					});
+					clearInterval(updateTimer);
+				}, 500);
+			}
+		});
+
+		webviewPanel.onDidDispose(() => {
+			event.dispose();
+		});
 	}
 
 	private onDidReceiveMessageDo(webview: vscode.Webview, request: any, document: vscode.TextDocument) {
 		switch (request.uri) {
 			case '/init':
-				let pageManager = new PageManager()
-				pageManager.resetRows(document, 0)
-				this.documentGeter = new DocumentGeter(document, pageManager, webview)
-				this.documentEditer = new DocumentEditer(document, pageManager, webview);
+				this.pageManager.resetRows(document, 0);
+				this.documentGeter = new DocumentGeter(document, this.pageManager, webview);
+				this.documentEditer = new DocumentEditer(document, this.pageManager, webview);
 				webview.postMessage({
 					requestId: request.requestId,
 					success: true
-				})
+				});
 				break;
 			case '/update/document':
 				let params = request.params
@@ -78,7 +98,7 @@ export class CSVEditorProvider implements vscode.CustomTextEditorProvider {
 				vscode.commands.executeCommand('vscode.open', this.feedbackUrl);
 				break;
 			case '/get/test':
-				vscode.commands.executeCommand('vscode.openWith', document.uri, 'for-you.csv-editor')
+				vscode.commands.executeCommand('vscode.openWith', document.uri, 'for-you.csv-editor');
 				break;
 			default:
 				break;

@@ -10,6 +10,7 @@ function buildRequestId() {
 export function initVueApp(app){
     const vscode = acquireVsCodeApi();
     let response = {}
+    let listens = {}
 
     let postMessage = function(uri, params, callback) {
         let requestId = buildRequestId();
@@ -22,15 +23,26 @@ export function initVueApp(app){
             response[requestId] = { respondHandler: callback };
         }
     }
+
+    let listenMsg = function(event, callback) {
+        listens[event] = callback;
+    }
+
     window.addEventListener('message', event => {
         let requestId = event.data.requestId;
-        response[requestId] && response[requestId].respondHandler(event);
+        let listen = event.data.event
+        if (response[requestId]) {
+            response[requestId].respondHandler(event);
+        } else if (listens[listen]) {
+            listens[listen](event);
+        }
     });
 
     let vueApp = createApp(app);
 
     vueApp.config.globalProperties.$vscode = vscode;
     vueApp.config.globalProperties.$postMessage = postMessage;
+    vueApp.config.globalProperties.$listenMsg = listenMsg;
 
     return vueApp;
 }
