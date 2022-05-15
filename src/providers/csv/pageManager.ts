@@ -68,14 +68,14 @@ export class PageManager {
         let texts = document.getText().split(/\n|\r\n/)
         let rowNo: number = currentRow;
         for (let line = startRow.startLine; line < texts.length; line ++) {
-            if (!startLine) { startLine = line; }
+            if (startLine === null) { startLine = line; }
 
             let text = texts[line];
             for (let i = 0; i < text.length; i ++) {
                 if (text[i] !== '"') { continue; }
                 flag === 0 ? flag += 1 : flag -= 1;
             }
-            if (flag !== 0) { continue; }
+            if (flag !== 0) { continue; } 
 
             if (this.rows[rowNo]) {
                 this.rows[rowNo] = {
